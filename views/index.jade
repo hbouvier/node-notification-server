@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  p Directory of #{path}
+  each filename, index in directory
+    a(href='/documents/#{index}') #{filename} <BR>

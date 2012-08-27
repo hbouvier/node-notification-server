@@ -1,0 +1,17 @@
+{
+  "name": "Notification-Server",
+  "description": "Collect Notifications and display them in Mac OS X Notification Center",
+  "version": "0.0.1",
+  "dependencies": {
+    "express": "latest",
+    "jade": "latest",
+    "socket.io": "latest",
+    "redis-node": "latest"
+  },
+  "engines": {
+    "node": ">=0.8.1"
+  },
+  "scripts": {
+    "start": "notification-server.js"
+  }
+}
