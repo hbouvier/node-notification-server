@@ -1,4 +1,5 @@
-var homepage = require('./homepage');
+var homepage      = require('./homepage')
+  , notifications = require('./notifications');
 
 module.exports = function (config, app) {
 
@@ -7,6 +8,10 @@ module.exports = function (config, app) {
   // public homepage routes
   homepage(config, app);
 
+  /////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // public notifications routes
+  notifications(config, app);
 };
 
 
