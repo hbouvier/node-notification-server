@@ -1,6 +1,5 @@
 extends layout
 
 block content
-  p Directory of #{path}
-  each filename, index in directory
-    a(href='/documents/#{index}') #{filename} <BR>
+  h1= title
+  p Welcome to #{title}

@@ -1,7 +1,12 @@
-/*
- * GET home page.
- */
+var homepage = require('./homepage');
 
-exports.index = function(req, res) {
-  res.render('index', { title: 'Express' });
+module.exports = function (config, app) {
+
+  /////////////////////////////////////////////////////////////////////////////////////////
+  //
+  // public homepage routes
+  homepage(config, app);
+
 };
+
+
