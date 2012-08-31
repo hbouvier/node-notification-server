@@ -28,8 +28,6 @@ config.https.options = {
 };
 config.udp.port = process.env.PORT || process.env.HTTPS_PORT || config.udp.port || config.http.port;
 
-util.log('config: ' + util.inspect(config));
-
 /////////////////////////////////////////////////////////////////////////////////////////
 //
 //  Global variable initialization
@@ -138,51 +136,40 @@ app.configure('production', function () {
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
-//  Include router
+//  Start TCP Server(s)
 //
-require('./routes')(config, app);
-
 if (config.https.active) {
-    util.log("Express secure server starting on port " + config.https['port']);
+    util.log("Express secure server starting on port " + config.https.port);
     https.createServer(config.https.options, app).listen(config.https.port, function(){
-      util.log("Express secure server listening on port " + config.https['port']);
+      util.log("Express secure server listening on port " + config.https.port);
     });
 }
 
 if (config.http.active) {
-    util.log("Express server starting on port " + config.http['port']);
+    util.log("Express server starting on port " + config.http.port);
     http.createServer(app).listen(config.http.port, function(){
-      util.log("Express server listening on port " + config.http['port']);
+      util.log("Express server listening on port " + config.http.port);
     });
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
+var udpRouter;
+
 if (config.udp.active) {
-    var udpServer   = dgram.createSocket('udp4'),
-        syslogRegex = /<([^>]+)>\s*(\d+\s+[A-Z][a-z]+\s+\d+:\d+:\d+)\s+([^\s]+)\s+(.*)/i; // <1>1 Jul 08:01:00 server.domain.name {json here}
-    
-    udpServer.on('message', function(msg, rinfo) {
-      util.log('udpServer got: ' + msg + ' from ' + rinfo.address + ':' + rinfo.port);
-      var logline = syslogRegex.exec(msg);
-      var loginfo = {
-          client_ip: rinfo.address,
-          pri: logline[1] || 0,
-          timestamp: logline[2] || 'unknown', // new Date(logline[2]),
-          hostname: logline[3]  || 'unknown',
-          message: logline[4]   || '{}'
-      };
-      var notification = JSON.parse(loginfo.message);
-      util.log('server got: ' + msg + ' from ' + rinfo.address + ':' + rinfo.port + '|' + util.inspect(loginfo));
-    
-      //notifier.send({'title':notification.title, 'message':notification.message});
-    });
-    
+    var udpServer   = dgram.createSocket('udp4');
+    udpRouter   = require('./udpRouter')(config, udpServer);
     udpServer.on('listening', function() {
         var address = udpServer.address();
-        util.log('DGRAM listening on ' + address.address + ':' + address.port);
+        util.log('node-notifications-server|UDP|server-listen=' + address.address + ':' + address.port);
     });
-    
     udpServer.bind(config.udp.port);
 }    
+
+
+/////////////////////////////////////////////////////////////////////////////////////////
+//
+//  Include router
+//
+require('./routes')(config, app, udpRouter);

@@ -11,7 +11,7 @@ var moduleName    = 'notifications',
 
 
 
-module.exports = function (serverConfig, app) {
+module.exports = function (serverConfig, app, udpRouter) {
     var config_        = serverConfig.routes[moduleName],
         debug_         = config_.debug        || false,
         context_       = config_.context      || '',
@@ -48,4 +48,14 @@ module.exports = function (serverConfig, app) {
     //
     app.get(context_ + 'version', auth_, version);
     app.post(context_ + 'show', show);
+    
+    if (udpRouter) {
+        udpRouter.add(context_ + 'show', function (err, datagram) {
+            util.log(context_ + 'show|client='+datagram.header.client + ':' + datagram.header.port + '|title='+datagram.data.title + '|message='+datagram.data.message);
+            notifications.send({'title':datagram.data.title, 'message':datagram.data.message}, function (err, output) {
+                if (err)
+                    return err;
+            });
+        });
+    }
 };
