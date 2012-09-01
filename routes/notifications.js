@@ -17,7 +17,12 @@ module.exports = function (serverConfig, app, udpRouter) {
         context_       = config_.context      || '',
         version_       = config_.version      || '0.0.0',
         serverVersion_ = serverConfig.version || '0.0.0',
-        auth_           = express.basicAuth(config_.auth.user, config_.auth.password);
+        auth_          = express.basicAuth(config_.auth.user, config_.auth.password),
+        Persistence    = require('../../modules/node-persistence/persistence')(config_),
+        persistence    = new Persistence(config_);
+
+    config_.persistence.URL = process.env.REDISTOGO_URL ? process.env.REDISTOGO_URL : process.env.REDIS_URL ? process.env.REDIS_URL : config_.persistence.URL;
+    
     
     /////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -41,14 +46,58 @@ module.exports = function (serverConfig, app, udpRouter) {
             res.end('{"application":"'+appInfo.name+'","version":"'+appInfo.version+'","status":"' + 'OK' + '"}');
         });
     }
+
+
+
+    function saveNotification(notice, callback) {
+        persistence.set(moduleName + ':' + notice.hostname, JSON.stringify(notice), notice.ttl, callback);
+    }
+    
+    function getClientAddress(req) {
+        return req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    }
+    
+    function getEpoch() {
+        return (new Date()).getTime() / 1000;
+    }
     
     /////////////////////////////////////////////////////////////////////////////////////////
     //
-    // public routes
+    // REST - POST
+    //
+    function post(req, res) {
+        if (debug_) util.log(context_ + ' - POST');
+        saveNotification(
+            { 'hostname'     : getClientAddress(req), // To avoid spoofing
+              'servername'   : req.query.servername   || getClientAddress(req),
+              'environment'  : req.query.environment  || 'none',
+              'severity'     : req.query.severity     || 0,
+              'repeatcount'  : req.query.repreatcount || 1,
+              'repeatperiod' : req.query.repeatperiod || 0,
+              'timestamp'    : req.query.timestamp    || getEpoch(),
+              'title'        : req.query.title        || 'Title',
+              'message'      : req.query.message      || 'Unknown',
+              'action'       : req.query.action       || 'none',
+              'actiondata'   : req.query.actiondata   || '',
+              'ttl'          : req.query.ttl          || 24 * 60 * 60 * 1000 // 24 hours
+            }, function (err, result) {
+                res.writeHead(200, {"Content-Type": "application/json"});
+                res.end('{"application":"'+appInfo.name+'","version":"'+appInfo.version+'","status":"' + 'OK' + '"}');
+        });
+    }
+    app.post(context_, post);
+
+    /////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // public HTTP(s)  routes
     //
     app.get(context_ + 'version', auth_, version);
     app.post(context_ + 'show', show);
     
+    /////////////////////////////////////////////////////////////////////////////////////////
+    //
+    // public DGRAM routes
+    //
     if (udpRouter) {
         udpRouter.add(context_ + 'show', function (err, datagram) {
             util.log(context_ + 'show|client='+datagram.header.client + ':' + datagram.header.port + '|title='+datagram.data.title + '|message='+datagram.data.message);
