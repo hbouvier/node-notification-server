@@ -6,13 +6,17 @@
 //
 //  Module dependencies.
 //
-var express = require('express'),
-    http    = require('http'),
-    https   = require('https'),
-    dgram   = require('dgram'),
-    path    = require('path'),
-    util    = require('util'),
-    fs      = require('fs');
+var express  = require('express'),
+    http     = require('http'),
+    https    = require('https'),
+    io       = require('socket.io'),
+    ioclient = require('socket.io-client'),
+    dgram    = require('dgram'),
+    path     = require('path'),
+    util     = require('util'),
+    fs       = require('fs');
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -138,20 +142,27 @@ app.configure('production', function () {
 //
 //  Start TCP Server(s)
 //
+var httpserver;
 if (config.https.active) {
     util.log("Express secure server starting on port " + config.https.port);
-    https.createServer(config.https.options, app).listen(config.https.port, function(){
+    httpserver = https.createServer(config.https.options, app).listen(config.https.port, function(){
       util.log("Express secure server listening on port " + config.https.port);
     });
 }
 
 if (config.http.active) {
     util.log("Express server starting on port " + config.http.port);
-    http.createServer(app).listen(config.http.port, function(){
+    httpserver = http.createServer(app).listen(config.http.port, function(){
       util.log("Express server listening on port " + config.http.port);
     });
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////
+//
+//  listen for websockets events
+//
+var socketIoServer = io.listen(httpserver);
+var socketIoClient = config.socketioclient.active ? ioclient.connect('http://' + config.socketioclient.host + ':' + config.socketioclient.port) : null;
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -172,4 +183,4 @@ if (config.udp.active) {
 //
 //  Include router
 //
-require('./routes')(config, app, udpRouter);
+require('./routes')(config, app, socketIoServer, socketIoClient, udpRouter);

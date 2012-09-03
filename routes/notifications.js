@@ -11,7 +11,7 @@ var moduleName    = 'notifications',
 
 
 
-module.exports = function (serverConfig, app, udpRouter) {
+module.exports = function (serverConfig, app, io, socketIoClient, udpRouter) {
     var config_        = serverConfig.routes[moduleName],
         debug_         = config_.debug        || false,
         context_       = config_.context      || '',
@@ -21,8 +21,26 @@ module.exports = function (serverConfig, app, udpRouter) {
         Persistence    = require('../../modules/node-persistence/persistence')(config_),
         persistence    = new Persistence(config_);
 
-    config_.persistence.URL = process.env.REDISTOGO_URL ? process.env.REDISTOGO_URL : process.env.REDIS_URL ? process.env.REDIS_URL : config_.persistence.URL;
+    var socketIoServer;
     
+    config_.persistence.URL = process.env.REDISTOGO_URL ? process.env.REDISTOGO_URL : process.env.REDIS_URL ? process.env.REDIS_URL : config_.persistence.URL;
+    util.log('io='+ io);
+    if (serverConfig.socketioclient.active) {
+        socketIoClient.on('connect', function () {
+            if (serverConfig.socketioclient.debug) util.log(moduleName+'|socket.io.client|connect');
+            // socketIoClient.send('hi there!');
+        });
+        
+        socketIoClient.on(moduleName + '.all', function (msg) {
+            if (serverConfig.socketioclient.debug) util.log(moduleName+'|socket.io.client|all|' + JSON.stringify(msg));
+            notifications.send({'title':msg.title, 'message':msg.title}, function (err, output) {
+            });        
+        });
+    }
+    
+    io.sockets.on('connection', function (socket) {
+        socketIoServer = socket;
+    });
     
     /////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -50,7 +68,10 @@ module.exports = function (serverConfig, app, udpRouter) {
 
 
     function saveNotification(notice, callback) {
+        util.log('io2='+io);
         persistence.set(moduleName + ':' + notice.hostname, JSON.stringify(notice), notice.ttl, callback);
+        socketIoServer.emit(moduleName + '.all', JSON.stringify(notice));
+        socketIoServer.emit(moduleName + '.' + notice.hostname, JSON.stringify(notice));
     }
     
     function getClientAddress(req) {
@@ -108,3 +129,4 @@ module.exports = function (serverConfig, app, udpRouter) {
         });
     }
 };
+

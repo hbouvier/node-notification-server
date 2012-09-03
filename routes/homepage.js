@@ -7,7 +7,7 @@ var moduleName = 'homepage',
 
 
 
-module.exports = function (serverConfig, app) {
+module.exports = function (serverConfig, app, io, udpRouter) {
     var config_        = serverConfig.routes[moduleName],
         debug_         = config_.debug   || false,
         context_       = config_.context || '',

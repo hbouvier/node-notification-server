@@ -6,6 +6,7 @@
     "express": "latest",
     "jade": "latest",
     "socket.io": "latest",
+    "socket.io-client" : "latest",
     "redis-node": "latest"
   },
   "engines": {
