@@ -32,8 +32,9 @@ module.exports = function (serverConfig, app, io, socketIoClient, udpRouter) {
         });
         
         socketIoClient.on(moduleName + '.all', function (msg) {
-            if (serverConfig.socketioclient.debug) util.log(moduleName+'|socket.io.client|all|' + JSON.stringify(msg));
-            notifications.send({'title':msg.title, 'message':msg.title}, function (err, output) {
+            if (serverConfig.socketioclient.debug) util.log(moduleName+'|socket.io.client|all|' + util.inspect(msg));
+            var object = JSON.parse(msg);
+            notifications.send({'title':object.title, 'message':object.message}, function (err, output) {
             });        
         });
     }
